@@ -1,5 +1,5 @@
 function p = set_params(scale,flare)
-
+%
 %% DEFINE UNSCALED:
     p.L = 3000;             % (km) Default 3000
     p.g = 9.8;              % m/s^2
