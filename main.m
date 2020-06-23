@@ -7,9 +7,10 @@
 
 
 clear all
+close all
 
 % SET ORDER OF SPATIAL ACCURACY
-order = 2; 
+order = 4; 
 
 % SET IF CONSTANT COEFFICIENTS
 constcoeff=false;
@@ -30,7 +31,8 @@ bg_type =  'explosive';     %options 'explosive', 'magmastatic' or 'custom'
 
 % Set grid spacing (m) at which to compute background state, and color for
 % plotting eigenvalues.
-DZ=10; col = 'ko';
+DZ=5; %grid resolution 
+col = 'ko';
 z = 0:DZ:p.L;
 N = length(z);
 
@@ -48,12 +50,12 @@ switch bg_type
         
     case 'explosive'
         % uncomment one below
-        % bg = solve_bg_state(DZ,1e-3,0,100,10000,'choked_flow',p, flare); bc_L = 'vel';  % choked flow.
-        bg = solve_bg_state(DZ,1e-9,0,50,10000,25,p, flare);                            % a specified exit velocity.
-      
+        bg = solve_bg_state(DZ,1e-3,0,100,10000,'choked_flow',p, flare); bc_L = 'vel';  % choked flow.
+        % bg = solve_bg_state(DZ,1e-9,0,100,10000,25,p, flare);                            % a specified exit velocity.
 
+%keyboard
     case 'magmastatic'
-        bg = solve_bg_state(DZ,1e-9,0,1,10000,0,p, flare);                            % specified exit velocity = 0.
+        bg = solve_bg_state(DZ,1e-4,0,2*(p.Patm+p.Pc+p.rho_tilde*p.g*p.L),10000,'magmastatic',p, flare);                            % specified exit velocity = 0.
 end
 
 % Evaluate if constant coefficient case.
@@ -72,8 +74,20 @@ end
 
 % Plot background state
 figure(1)
-plot(z,bg.vbar,'bo',z,bg.ceqbar,'ro')
-pause
+subplot(1,3,1)        
+hold on
+plot(bg.vbar,z)
+subplot(1,3,2)
+hold on
+plot(1./bg.Kbar .*bg.dPbar_dz - 1./bg.rhobar .*bg.drhobar_dz,z)
+subplot(1,3,3)
+hold on
+plot(bg.cbar,z)
+%plot(bg.bbar.*bg.dPbar_dz,z)
+plot(bg.ceqbar,z)
+%plot(z,bg.vbar,'bo',z,bg.ceqbar,'ro')
+
+%pause
 
 % GET/FORM OPERATORS
 [z,dz,D,Hinv00,A,H] = grid_operators(N-1,p.L,order); 
@@ -131,7 +145,7 @@ S4(2*N,3*N) = -sigma2*Hinv00*R;
 
 % Build numerical approximation to operator L(z)d_dz
 DLAM = 0.5*(D4*L4 + L4*D4)  - 0.5*diag(D4*[lambda1;lambda2;lambda3;lambda4]);     % Skew-symmetric SBP
-% DLAM = L4*D4;                                                                   % alternative option ("standard" SBP) but doesn't have stability proof. 
+DLAM2 = L4*D4;                                                                    % alternative option ("standard" SBP) but doesn't have stability proof. 
 
 % Build numerical operator C
 C = 1.*Pinv*B*P - L4*Pinv*Pz;                                                 
@@ -143,7 +157,8 @@ e = eig(MAT);
 % Plot numerical eigvenvalues
 figure(2)
 max(real(e))
-plot(real(e),imag(e), col')
+hold on
+plot(real(e),imag(e),'o')% col')
 
 %if strcmp(col, 'ko')
  %   mm = -10.*(N-1)/1:1:10.*(N-1)/1;

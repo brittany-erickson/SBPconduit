@@ -45,9 +45,15 @@ dphi_dp = zeros(N,1);
 
 dzbar_dz = zeros(N,1);
 
+sigma = zeros(N,1);
+dsigma_dz = zeros(N,1);
+
 
 for i = 1:N
  
+        sigma(i) = (p.nsigma2-p.nsigma1)*tanh((z(i)-p.L)/p.zstar_n) + p.nsigma2; %flare in external gas
+        dsigma_dz(i) = (p.nsigma2-p.nsigma1)/p.zstar_n * sech((z(i)-p.L)/p.zstar_n)^2;
+        
         if flare
            r(i) = (p.r2-p.r1)*tanh((z(i)-p.L)/p.zstar) + p.r2;
            A(i) = pi*r(i)^2;
@@ -56,18 +62,18 @@ for i = 1:N
         else
             r(i) = (p.rL-p.r0)*z(i)/p.L + p.r0;
             A(i) = pi*r(i)^2;
-            dA_dz(i) = 2*pi*r(i)*(p.rL-p.r0)/p.L;
-           
+            dA_dz(i) = 2*pi*r(i)*(p.rL-p.r0)/p.L;           
         end
        
          
          if Pbar(i) < (p.nt/p.sw)^2
-            nbar(i) = p.nt-p.sw*sqrt(Pbar(i));          %set nbar = neq
             dnbar_dP(i) = -p.sw*0.5*Pbar(i)^(-1/2);
             bbar(i) = -dnbar_dP(i); 
+            nbar(i) = p.nt-p.sw*sqrt(Pbar(i))+ sigma(i);          %set nbar = neq(P) + sigma(z), where sigma is arbitrary fct of z
+
      
         else
-            nbar(i) = 0;
+            nbar(i) = sigma(i);%0;
             dnbar_dP(i) = 0;
             bbar(i) = 0;
             
@@ -79,12 +85,12 @@ for i = 1:N
         drhog_dP(i) = 1/(p.R*p.T);
         
         rhobar(i) = 1/((nbar(i)/rhog(i)) + (1-nbar(i))/rho_liq(i)); 
-        drho_dn(i) = -rhobar(i)^(2)*(1/rhog(i) -1/rho_liq(i)); 
         
-   
+        drho_dn(i) = -rhobar(i)^(2)*(1/rhog(i) -1/rho_liq(i)); 
           
         drho_dP(i) = -rhobar(i)^(2)*(-nbar(i)*drhog_dP(i)/rhog(i)^2 ...
             + ((nbar(i)-1)*drho_liq_dP(i))/rho_liq(i)^2);
+        
         cbar(i) = (drho_dP(i))^(-1/2);
         
          drhobar_dPbar(i) = -rhobar(i)^(2)*(dnbar_dP(i)/rhog(i) - nbar(i)*drhog_dP(i)/rhog(i)^2 + ...
@@ -92,11 +98,13 @@ for i = 1:N
 
     
          if Pbar(i) < (p.nt/p.sw)^2
-
             abar(i) = -(1/rhobar(i)) .* drho_dn(i);  %why is this line here? 
-
          else
-            abar(i) = 0; %same as above. why is this line here? 
+             if dsigma_dz(i) == 0
+             abar(i) = 0; %same as above. why is this line here?
+             else
+             abar(i) = -(1/rhobar(i)) .* drho_dn(i);
+             end
          end
          
         ceqbar(i) = sqrt(1/(1/cbar(i)^2 + abar(i)*bbar(i)*rhobar(i)));
@@ -107,7 +115,6 @@ for i = 1:N
         dphi_dp(i) = (-nbar(i)*drhog_dP(i)/rhog(i)^2)*(nbar(i)/rhog(i) + ...
             (1-nbar(i))/rho_liq(i)) + (nbar(i)/rhog(i))*(-nbar(i)*drhog_dP(i)/rhog(i)^2 - (1-nbar(i))*drho_liq_dP(i)/rho_liq(i)^2);
         
-
 
     if vbar(i) > 0
             f2 = p.f0;
@@ -143,10 +150,10 @@ for i = 1:N
    
         %define partial derivatives
         rat = (vbar(i)/ceqbar(i))^2;
-        dvbar_dz(i) = (1/(1-rat))*(rat*(rhobar(i)*p.g + fbar(i))/(rhobar(i)*vbar(i)) - (vbar(i)/A(i))*dA_dz(i));
-        dPbar_dz(i) = (1/(1-rat))*(-rhobar(i)*p.g - fbar(i) + (rhobar(i)*vbar(i)^2/A(i))*dA_dz(i));
+        dvbar_dz(i) = (1/(1-rat))*(rat*(rhobar(i)*p.g + fbar(i))/(rhobar(i)*vbar(i)) - (vbar(i)/A(i))*dA_dz(i) + abar(i)*vbar(i)*dsigma_dz(i));
+        dPbar_dz(i) = (1/(1-rat))*(-rhobar(i)*p.g - fbar(i) + (rhobar(i)*vbar(i)^2/A(i))*dA_dz(i) - rhobar(i)*abar(i)*vbar(i)^2*dsigma_dz(i));
         dnbar_dz(i) = -bbar(i)*dPbar_dz(i);
-        drhobar_dz(i) = drhobar_dPbar(i)*dPbar_dz(i); 
+        drhobar_dz(i) = drhobar_dPbar(i)*dPbar_dz(i) - rhobar(i)*abar(i)*dsigma_dz(i); 
         Kbar(i)  = rhobar(i)*cbar(i)^2;
         
         b1 = -nbar(i)*drhog_dP(i)/rhog(i)^2 + (nbar(i)-1)*drho_liq_dP(i)/rho_liq(i)^2;
@@ -159,7 +166,6 @@ for i = 1:N
         dzbar_dz(i) = cbar(i)*drhobar_dz(i) + rhobar(i)*dcbar_dz(i);
 
 end
-
 
 
 fields.rhobar = rhobar;
@@ -189,5 +195,7 @@ fields.A = A;
 fields.dA_dz = dA_dz;
 fields.zbar = rhobar.*cbar;
 fields.dzbar_dz = dzbar_dz;
+fields.sigma = sigma;
+fields.dsigma_dz = dsigma_dz;
 
      
