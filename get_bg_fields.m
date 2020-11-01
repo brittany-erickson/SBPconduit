@@ -25,6 +25,8 @@ abar = zeros(N,1);
 phi = zeros(N,1);
 fbar = zeros(N,1);
 bbar = zeros(N,1); 
+dbbar_dz = zeros(N,1);
+dabar_dz = zeros(N,1);
 A = zeros(N,1);
 dA_dz = zeros(N,1);
 
@@ -39,6 +41,7 @@ drhobar_dz = zeros(N,1);
 dPbar_dz = zeros(N,1);
 dnbar_dz = zeros(N,1);
 dcbar_dz = zeros(N,1);
+dceqbar_dz = zeros(N,1);
 dkbar_dz = zeros(N,1);
 dphi_dn = zeros(N,1);
 dphi_dp = zeros(N,1);
@@ -67,7 +70,8 @@ for i = 1:N
        
          
          if Pbar(i) < (p.nt/p.sw)^2
-            dnbar_dP(i) = -p.sw*0.5*Pbar(i)^(-1/2);
+            dnbar_dP(i) = -p.sw*1/2*Pbar(i)^(-1/2);
+            dnbar2_dP2(i) = p.sw*1/4*Pbar(i)^(-3/2); %second derivative of equilibrium solubility
             bbar(i) = -dnbar_dP(i); 
             nbar(i) = p.nt-p.sw*sqrt(Pbar(i))+ sigma(i);          %set nbar = neq(P) + sigma(z), where sigma is arbitrary fct of z
 
@@ -75,6 +79,7 @@ for i = 1:N
         else
             nbar(i) = sigma(i);%0;
             dnbar_dP(i) = 0;
+            dnbar2_dP2(i) = 0;
             bbar(i) = 0;
             
          end
@@ -89,13 +94,13 @@ for i = 1:N
         drho_dn(i) = -rhobar(i)^(2)*(1/rhog(i) -1/rho_liq(i)); 
           
         drho_dP(i) = -rhobar(i)^(2)*(-nbar(i)*drhog_dP(i)/rhog(i)^2 ...
-            + ((nbar(i)-1)*drho_liq_dP(i))/rho_liq(i)^2);
+            - (1-nbar(i))*drho_liq_dP(i)/rho_liq(i)^2);
         
         cbar(i) = (drho_dP(i))^(-1/2);
+%         (p.rho_tilde.^(-1).*(p.Kliq.*((-1)+nbar(i)).*Pbar(i)+(-1).*nbar(i).*(p.Kliq+Pbar(i)).*p.R.*p.rho_tilde.* ...
+% p.T).^2.*((-1).*p.Kliq.*((-1)+nbar(i)).*Pbar(i).^2+nbar(i).*(p.Kliq+Pbar(i)).^2.*p.R.*p.rho_tilde.* ...
+%  p.T).^(-1)).^(1/2);  
         
-         drhobar_dPbar(i) = -rhobar(i)^(2)*(dnbar_dP(i)/rhog(i) - nbar(i)*drhog_dP(i)/rhog(i)^2 + ...
-           (-rho_liq(i)*dnbar_dP(i) + (nbar(i)-1)*drho_liq_dP(i))/rho_liq(i)^2);
-
     
          if Pbar(i) < (p.nt/p.sw)^2
             abar(i) = -(1/rhobar(i)) .* drho_dn(i);  %why is this line here? 
@@ -106,8 +111,12 @@ for i = 1:N
              abar(i) = -(1/rhobar(i)) .* drho_dn(i);
              end
          end
-         
-        ceqbar(i) = sqrt(1/(1/cbar(i)^2 + abar(i)*bbar(i)*rhobar(i)));
+                  
+         ceqbar(i) = sqrt(1/(1/cbar(i)^2 + abar(i)*bbar(i)*rhobar(i)));
+        
+         drhobar_dPbar(i) = 1./ceqbar(i)^2;
+         %-rhobar(i)^(2)*(dnbar_dP(i)/rhog(i) - nbar(i)*drhog_dP(i)/rhog(i)^2 + ...
+         %(-rho_liq(i)*dnbar_dP(i) + (nbar(i)-1)*drho_liq_dP(i))/rho_liq(i)^2);        
         
         phi(i) = nbar(i)/rhog(i)/(nbar(i)/rhog(i) + (1-nbar(i))/rho_liq(i));
         
@@ -115,7 +124,9 @@ for i = 1:N
         dphi_dp(i) = (-nbar(i)*drhog_dP(i)/rhog(i)^2)*(nbar(i)/rhog(i) + ...
             (1-nbar(i))/rho_liq(i)) + (nbar(i)/rhog(i))*(-nbar(i)*drhog_dP(i)/rhog(i)^2 - (1-nbar(i))*drho_liq_dP(i)/rho_liq(i)^2);
         
-
+        %used for partial derivs later
+        rat = (vbar(i)/ceqbar(i))^2;
+        
     if vbar(i) > 0
             f2 = p.f0;
             f1 = 8*p.eta*vbar(i)/r(i)^2;
@@ -140,31 +151,52 @@ for i = 1:N
                 
             end
             
-            
-         else
+            dvbar_dz(i) = (1/(1-rat))*(rat*(rhobar(i)*p.g + fbar(i))/(rhobar(i)*vbar(i)) - (vbar(i)/A(i))*dA_dz(i) + abar(i)*vbar(i)*dsigma_dz(i));
+
+                    
+    else
             fbar(i) = 0; 
             Fv(i)   = 0;
             Fn(i)   = 0;
             Fp(i)   = 0;
+    
+            dvbar_dz(i) = 0;
     end
    
         %define partial derivatives
-        rat = (vbar(i)/ceqbar(i))^2;
-        dvbar_dz(i) = (1/(1-rat))*(rat*(rhobar(i)*p.g + fbar(i))/(rhobar(i)*vbar(i)) - (vbar(i)/A(i))*dA_dz(i) + abar(i)*vbar(i)*dsigma_dz(i));
-        dPbar_dz(i) = (1/(1-rat))*(-rhobar(i)*p.g - fbar(i) + (rhobar(i)*vbar(i)^2/A(i))*dA_dz(i) - rhobar(i)*abar(i)*vbar(i)^2*dsigma_dz(i));
-        dnbar_dz(i) = -bbar(i)*dPbar_dz(i);
+        dPbar_dz(i) = (1/(1-rat))*(-rhobar(i)*p.g - fbar(i) + rhobar(i)*vbar(i)^2*(1/A(i))*dA_dz(i) - abar(i)*dsigma_dz(i));
+        dnbar_dz(i) = -bbar(i)*dPbar_dz(i) + dsigma_dz(i);
         drhobar_dz(i) = drhobar_dPbar(i)*dPbar_dz(i) - rhobar(i)*abar(i)*dsigma_dz(i); 
-        Kbar(i)  = rhobar(i)*cbar(i)^2;
+        Kbar(i)  = (1/(rhobar(i)*cbar(i)^2) + abar(i)*bbar(i))^(-1); %equilibrium bulk modulus
         
-        b1 = -nbar(i)*drhog_dP(i)/rhog(i)^2 + (nbar(i)-1)*drho_liq_dP(i)/rho_liq(i)^2;
-        b2 = ((-dnbar_dP(i)*drhog_dP(i))*rhog(i)^2 + nbar(i)*drhog_dP(i)*2*rhog(i)*drhog_dP(i))/rhog(i).^4;
-        b3 = ((dnbar_dP(i)*drho_liq_dP(i))*rho_liq(i)^2 - (nbar(i)-1)*drho_liq_dP(i)*2*rho_liq(i)*drho_liq_dP(i))/rho_liq(i).^4;
-        AA = -2*rhobar(i)*drhobar_dPbar(i)*b1 - rhobar(i)^2*(b2 + b3);
+        %%%%%now compute derivates of background state for operator splitting 
+        b1 = (dnbar_dz(i)*rho_liq(i)^2 + 2 * nbar(i)*rho_liq(i)*drho_liq_dP(i)* dPbar_dz(i)) * drhog_dP(i);
+        %old%-nbar(i)*drhog_dP(i)/rhog(i)^2 + (nbar(i)-1)*drho_liq_dP(i)/rho_liq(i)^2;
+        b2 = (-dnbar_dz(i)*rhog(i)^2 + (1-nbar(i))*2*rhog(i)*drhog_dP(i)*dPbar_dz(i)) * drho_liq_dP(i);
+        %old%((-dnbar_dP(i)*drhog_dP(i))*rhog(i)^2 + nbar(i)*drhog_dP(i)*2*rhog(i)*drhog_dP(i))/rhog(i).^4;
+        b3 = -2*(rhog(i)*(1-nbar(i))+nbar(i)*rho_liq(i))^(-3) * ((rho_liq(i)-rhog(i))*dnbar_dz(i) + ...
+            (drhog_dP(i)*(1-nbar(i)) + nbar(i)*drho_liq_dP(i))*dPbar_dz(i));
+        %old%((dnbar_dP(i)*drho_liq_dP(i))*rho_liq(i)^2 - (nbar(i)-1)*drho_liq_dP(i)*2*rho_liq(i)*drho_liq_dP(i))/rho_liq(i).^4;
+        AA = (b1+b2)/(rhog(i)*(1-nbar(i))+nbar(i)*rho_liq(i))^2 + b3*(nbar(i)*rho_liq(i)^2*drhog_dP(i) + (1-nbar(i))*rhog(i)^2*drho_liq_dP(i));
+        %old%-2*rhobar(i)*drhobar_dPbar(i)*b1 - rhobar(i)^2*(b2 + b3);
        
-        dcbar_dz(i) = -0.5*(drho_dP(i))^(-3/2)*AA*dPbar_dz(i);
-        dkbar_dz(i) = 2*cbar(i)*dcbar_dz(i)*rhobar(i) + cbar(i)^2*drhobar_dz(i);
-        dzbar_dz(i) = cbar(i)*drhobar_dz(i) + rhobar(i)*dcbar_dz(i);
+        dcbar_dz(i) = -0.5*(drho_dP(i))^(-3/2)*AA;%*dPbar_dz(i);
+        
+        %%%%
+        dzbar_dz(i) = cbar(i)*drhobar_dz(i) + rhobar(i)*dcbar_dz(i); %this is derivative of impedance wrt z
 
+        %%%%
+        dbbar_dz(i) = -dnbar2_dP2(i) * dPbar_dz(i);
+        dabar_dz(i) = -drhobar_dz(i)*(1/rhog(i)-1/rho_liq(i)) + ...
+            (2*drhobar_dz(i)*(1/rhog(i)-1/rho_liq(i)) + rhobar(i)*(-1/rhog(i)^2*drhog_dP(i) + 1/rho_liq(i)^2*drho_liq_dP(i))*dPbar_dz(i));
+        dkbar_dz(i) = -Kbar(i)^2 * (-1/(rhobar(i)^2*cbar(i)^2)*drhobar_dz(i) - 2/(rhobar(i)*cbar(i)^3)*dcbar_dz(i) + ...
+            abar(i)*dbbar_dz(i) + bbar(i)*dabar_dz(i));
+        %2*cbar(i)*dcbar_dz(i)*rhobar(i) + cbar(i)^2*drhobar_dz(i);
+        
+        %%%%
+        dceqbar_dz(i) = -1/2 * (1/cbar(i)^2+rhobar(i)*abar(i)*bbar(i))^(-3/2) * ...
+            (-2/cbar(i)^3 * dcbar_dz(i) + rhobar(i)*abar(i)*dbbar_dz(i) + rhobar(i)*bbar(i)*dabar_dz(i)+abar(i)*bbar(i)*drhobar_dz(i));
+        
 end
 
 
@@ -172,11 +204,12 @@ fields.rhobar = rhobar;
 fields.nbar = nbar;
 fields.rho_liq = rho_liq;
 fields.rhog = rhog;
-fields.dP_drho = dP_drho;
+fields.drho_dP = drho_dP;
 fields.drho_dn = drho_dn;
 fields.cbar = cbar;
 fields.dcbar_dz = dcbar_dz;
 fields.ceqbar = ceqbar;
+fields.dceqbar_dz = dceqbar_dz;
 fields.abar = abar;
 fields.phi = phi;
 fields.fbar = fbar;

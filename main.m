@@ -26,7 +26,7 @@ p = set_params(scale, flare);
 bc_L = 'pres';              % options: 'vel' or 'pres' - top boundary condition, data set to 0.
 bc_0 = 'vel, dens, n';      % options: 'vel, dens, n' or 'press, dens, n' - bottom boundary condition, data set to 0.
 
-bg_type =  'explosive';     %options 'explosive', 'magmastatic' or 'custom' 
+bg_type =  'magmastatic';     %options 'explosive', 'magmastatic' or 'custom' 
 
 
 % Set grid spacing (m) at which to compute background state, and color for
@@ -50,25 +50,27 @@ switch bg_type
         
     case 'explosive'
         % uncomment one below
-        bg = solve_bg_state(DZ,1e-3,0,100,10000,'choked_flow',p, flare); bc_L = 'vel';  % choked flow.
-        % bg = solve_bg_state(DZ,1e-9,0,100,10000,25,p, flare);                            % a specified exit velocity.
+        %bg = solve_bg_state(DZ,1e-3,0,100,10000,'choked_flow',p, flare); bc_L = 'vel';  % choked flow.
+        bg = solve_bg_state(DZ,1e-9,0,100,10000,25,p, flare);                            % a specified exit velocity.
 
 %keyboard
     case 'magmastatic'
         bg = solve_bg_state(DZ,1e-4,0,2*(p.Patm+p.Pc+p.rho_tilde*p.g*p.L),10000,'magmastatic',p, flare);                            % specified exit velocity = 0.
 end
-
+%keyboard
 % Evaluate if constant coefficient case.
 if constcoeff
     % specify where to evaluate background state. E.g. Nev = (N-1)/2 +1 is
     % middle of conduit, Nev = N is Earth surface. 
-    Nev = (N-1)/2 + 1;
+    Nev = (N-1)*5/6 + 1;
     vbar = bg.vbar(Nev)*ones(N,1); 
     Pbar = bg.Pbar(Nev)*ones(N,1);
-    bg = get_bg_bg(z(Nev)*ones(N,1),vbar,Pbar,p,flare);
+    bg = get_bg_fields(z(Nev)*ones(N,1),vbar,Pbar,p,flare);
     bg.vbar = vbar;
     bg.Pbar = Pbar;
     bg.z = z;
+    
+    %keyboard
 
 end
 
@@ -76,16 +78,20 @@ end
 figure(1)
 subplot(1,3,1)        
 hold on
-plot(bg.vbar,z)
+plot(bg.nbar,z)
+xlabel('gas mass frac')
 subplot(1,3,2)
 hold on
-plot(1./bg.Kbar .*bg.dPbar_dz - 1./bg.rhobar .*bg.drhobar_dz,z)
+plot(bg.rhobar,z)
+%plot(1./bg.Kbar .*bg.dPbar_dz - 1./bg.rhobar .*bg.drhobar_dz,z)
+xlabel('rho')
 subplot(1,3,3)
 hold on
-plot(bg.cbar,z)
-%plot(bg.bbar.*bg.dPbar_dz,z)
-plot(bg.ceqbar,z)
-%plot(z,bg.vbar,'bo',z,bg.ceqbar,'ro')
+%plot(bg.cbar,z)
+plot(bg.drhobar_dz,z)
+xlabel('drhodz')
+%plot(bg.ceqbar,z)
+%plot(bg.vbar,z,'b-',bg.ceqbar,z,'r-')
 
 %pause
 
@@ -160,12 +166,12 @@ max(real(e))
 hold on
 plot(real(e),imag(e),'o')% col')
 
-%if strcmp(col, 'ko')
- %   mm = -10.*(N-1)/1:1:10.*(N-1)/1;
- %   sn = (2*pi.*mm.*1i + log(R*R3))/(Im3-Im2);
- %   plot(real(sn),imag(sn),'b.')
- %   hold on
-%end
+if strcmp(col, 'ko')
+   mm = -10.*(N-1)/1:1:10.*(N-1)/1;
+   sn = (2*pi.*mm.*1i + log(R*R3))/(Im3-Im2);
+   plot(real(sn),imag(sn),'b.')
+   hold on
+end
 
 
 return
