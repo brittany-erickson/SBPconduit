@@ -215,7 +215,7 @@ Resolved = find(Good==1);
 
 %find well-resolved mode with smallest non-zero imag part
 ImS=imag(sm(Resolved));
-NonZeroI = abs(ImS)>1e-10;
+NonZeroI = abs(ImS)>1e-6;
 [ImSmin,kImSmin] = min(abs(ImS(NonZeroI)));
 
 kI = find(imag(sm)==ImSmin);
@@ -240,8 +240,8 @@ ylabel('imag(s)')
 %on vertical axis, we have all 4 variables stacked (1st N points are P etc)
 XX=Resolved;
 figure(3)
-pcolor(abs(Qp(:,XX(1:100)))); shading flat
-caxis([0, .025]) 
+pcolor(abs(Qp(:,XX(1:250)))); shading flat
+caxis([0, .05]) 
 
 
 figure(4)
@@ -250,8 +250,6 @@ plot(z,real(Qp(:,kReSmax)))
 title(['Mode with largest real part: real(S) = ', num2str(ReSmax), ' imag(S) = ', num2str(imag(sm(Resolved(kReSmax))))])
 xlabel('z (m)'); ylabel('pressure pert. (Pa)')
 subplot(2,1,2)
-plot(z,real(Qp(:,kI)))
-hold on
-plot(z,imag(Qp(:,kI)))
-title(['Min propagating mode: real(S) = ', num2str(real(sm(kI))), ' imag(S) = ', num2str(ImSmin)])
-xlabel('z (m)'); ylabel('pressure, Re and Im (Pa)')
+plot(z,Qp(:,kI).*conj(Qp(:,kI)))
+title(['Min propagating mode: real(S) = ', num2str(real(sm(kI))), ' imag(S) = ', num2str(imag(sm(kI)))])
+xlabel('z (m)'); ylabel('pressure^2 (Pa)')
