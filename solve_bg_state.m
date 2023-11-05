@@ -144,6 +144,47 @@ bg.Pbar = Pbar;
 bg.z = z; 
 bg.p = p;
 
+if strcmp(bc_type,'magmastatic')
+    bg.vbar = zeros(size(bg.Pbar));
+    bg.dvbar_dz = zeros(size(bg.Pbar));
+
+
+rho_liq = p.rho_tilde*(1 + bg.Pbar./p.Kliq); 
+drhol_dP = p.rho_tilde./p.Kliq; 
+rhog = bg.Pbar./(p.R*p.T);
+drhog_dP = 1/(p.R*p.T);
+
+drho_dn = -bg.rhobar.^2.*(1./rhog -1./rho_liq); 
+          
+drho_dP = bg.rhobar.^2.*(bg.nbar.*drhog_dP./rhog.^2 ...
+            + ((1-bg.nbar).*drhol_dP)./rho_liq.^2);
+
+d2rho_dP2 = -2.*bg.rhobar.^3 .*(bg.nbar./rhog.^2.*drhog_dP + (1-bg.nbar)./rho_liq.^2.*drhol_dP).^2+...
+    bg.rhobar.^2 .*(-2.*bg.nbar./rhog.^3 .*drhog_dP.^2 - 2.*(1-bg.nbar)./rho_liq.^3 .*drhol_dP.^2);
+
+dCdP = -.5 .*drho_dP.^(-3/2) .* d2rho_dP2;
+
+dCdN = (.5 .*(bg.nbar.*rho_liq+(1-bg.nbar).*rhog).*(rhog.^2*drhol_dP-rho_liq.^2 .*drhog_dP) - ...
+    (bg.nbar.*rho_liq.^2 .*drhog_dP + (1-bg.nbar).*rhog.^2 .*drhol_dP).*(rhog-rho_liq)) .* ...
+    ((bg.nbar.*rho_liq.^2 .*drhog_dP + (1-bg.nbar).*rhog.^2 .*drhol_dP)./(bg.nbar.*rho_liq+(1-bg.nbar).*rhog).^2).^(-3/2) .* ...
+    (bg.nbar.*rho_liq+(1-bg.nbar).*rhog).^(-3);
+
+d2Zinv_dz = (p.g ./(2.*bg.cbar) .*(1./bg.rhobar .*(drho_dP - p.sw./(2*sqrt(bg.Pbar)).*drho_dn) + ...
+    1./bg.cbar.*(dCdP - p.sw./(2.*sqrt(bg.Pbar)).*dCdN))); %term 1 from Jasper
+
+d2C2inv_dz = bg.rhobar.*p.g./bg.cbar.^3 .*(dCdP - p.sw./(2*sqrt(bg.Pbar)).*dCdN); %term 2
+
+dsqrt2K_dz = p.g./(sqrt(8*bg.rhobar).*bg.cbar.^2) .* (bg.cbar.*(drho_dP - p.sw./(2*sqrt(bg.Pbar)).*drho_dn) +...
+    2*bg.rhobar.*(dCdP - p.sw./(2*sqrt(bg.Pbar)).*dCdN)); %term 3 from Jasper
+
+bg.d2Zinv_dz = d2Zinv_dz';
+bg.d2C2inv_dz = d2C2inv_dz';
+bg.dsqrt2K_dz = dsqrt2K_dz';
+
+
+
+end
+
 
 
 

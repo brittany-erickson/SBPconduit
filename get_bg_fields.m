@@ -88,8 +88,10 @@ for i = 1:N
         
         drho_dn(i) = -rhobar(i)^(2)*(1/rhog(i) -1/rho_liq(i)); 
           
-        drho_dP(i) = -rhobar(i)^(2)*(-nbar(i)*drhog_dP(i)/rhog(i)^2 ...
-            + ((nbar(i)-1)*drho_liq_dP(i))/rho_liq(i)^2);
+%         drho_dP(i) = -rhobar(i)^(2)*(-nbar(i)*drhog_dP(i)/rhog(i)^2 ...
+%             + ((nbar(i)-1)*drho_liq_dP(i))/rho_liq(i)^2);
+        drho_dP(i) = rhobar(i)^(2)*(nbar(i)*drhog_dP(i)/rhog(i)^2 ...
+            + ((1-nbar(i))*drho_liq_dP(i))/rho_liq(i)^2);        
         
         cbar(i) = (drho_dP(i))^(-1/2);
         

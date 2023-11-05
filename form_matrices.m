@@ -1,11 +1,13 @@
-function [B, P, Pinv, Pz, Pinv_Pz, DP] = form_matrices(bg, p, D, N)
+function [B, P, Pinv, Pz] = form_matrices(bg, p, D, N)
+%[B, P, Pinv, Pz, Pinv_Pz, DP] = form_matrices(bg, p, D, N)
 
 b11 = -diag(bg.dvbar_dz + bg.Fv./bg.rhobar);
 b12 = -diag(bg.vbar.*bg.dvbar_dz + p.g)./bg.rhobar;
 b13 = diag(-bg.Fp./bg.rhobar);
 b14 = diag(-bg.Fn./bg.rhobar);
 
-b21 = -diag((1./bg.ceqbar.^2).*bg.dPbar_dz + bg.rhobar.*bg.dA_dz./bg.A);
+%b21 = -diag((1./bg.ceqbar.^2).*bg.dPbar_dz + bg.rhobar.*bg.dA_dz./bg.A);
+b21 = -diag(bg.drhobar_dz + bg.rhobar.*bg.dA_dz./bg.A);
 b22 =  -diag((bg.dvbar_dz.*bg.A + bg.vbar.*bg.dA_dz)./bg.A);
 b23 = 0*diag(ones(N,1));
 b24 = 0*diag(ones(N,1));
@@ -96,15 +98,26 @@ DP = [pz11 pz12 pz13 pz14; pz21 pz22 pz23 pz24; pz31 pz32 pz33 pz34; pz41 pz42 p
 
   
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Analytic calculation odf P_z
+% Analytic calculation of P_z
 pz11 = 0*diag(ones(N,1));
+%%old version (prior to Jasper's work!)
 pz12 = diag((bg.dzbar_dz./(2*bg.zbar.^2)));
 pz13 = diag((-bg.dzbar_dz./(2*bg.zbar.^2)));
+%%new version
+% pz12 = diag(-bg.d2Zinv_dz);
+% pz13 = diag(bg.d2Zinv_dz);
+
 pz14 = 0*diag(ones(N,1));
 
+%%old version
 pz21 = diag((-bg.dcbar_dz./(bg.cbar.^3)));
 pz22 = diag((-bg.dcbar_dz./(bg.cbar.^3)));
 pz23 = diag((-bg.dcbar_dz./(bg.cbar.^3)));
+%%new version
+% pz21 = diag(bg.d2C2inv_dz);
+% pz22 = diag(bg.d2C2inv_dz);
+% pz23 = diag(bg.d2C2inv_dz);
+
 pz24 =  0*diag(ones(N,1));
 
 pz31 = 0*diag(ones(N,1));
@@ -115,31 +128,34 @@ pz34 = 0*diag(ones(N,1));
 pz41 = 0*diag(ones(N,1));
 pz42 = 0*diag(ones(N,1));
 pz43 = 0*diag(ones(N,1));
+%%old version
 pz44 = diag((0.5.*(1./(2.*bg.Kbar)).^(-0.5)) .* -2.*bg.dkbar_dz./(4.*bg.Kbar.^2));%diag(D*(sqrt(1./(2.*bg.Kbar))));
+%%new version
+% pz44 = diag(bg.dsqrt2K_dz);
 
 Pz = [pz11 pz12 pz13 pz14; pz21 pz22 pz23 pz24; pz31 pz32 pz33 pz34; pz41 pz42 pz43 pz44];
 
 
 
-pinv_pz11 = diag((-2./bg.cbar).*(bg.dcbar_dz));
-pinv_pz12 = diag((-2./bg.cbar).*(bg.dcbar_dz));
-pinv_pz13 = diag((-2./bg.cbar).*(bg.dcbar_dz));
-pinv_pz14 = 0*diag(ones(N,1));
-
-pinv_pz21 = 0*diag(ones(N,1));
-pinv_pz22 = (-1/2).*diag((bg.dzbar_dz)./bg.zbar);
-pinv_pz23 = (1/2).*diag((bg.dzbar_dz)./bg.zbar);
-pinv_pz24 =  0*diag(ones(N,1));
-
-pinv_pz31 = 0*diag(ones(N,1));
-pinv_pz32 = (1/2).*diag((bg.dzbar_dz)./bg.zbar);
-pinv_pz33 = (-1/2).*diag((bg.dzbar_dz)./bg.zbar);
-pinv_pz34 = 0*diag(ones(N,1));
-
-pinv_pz41 = 0*diag(ones(N,1));
-pinv_pz42 = 0*diag(ones(N,1));
-pinv_pz43 = 0*diag(ones(N,1));
-pinv_pz44 = (-1/2).*diag((sqrt(2.*bg.Kbar)./bg.Kbar.^2).*(bg.dkbar_dz));
-
-Pinv_Pz = [pinv_pz11 pinv_pz12 pinv_pz13 pinv_pz14; pinv_pz21 pinv_pz22 pinv_pz23 pinv_pz24; pinv_pz31 pinv_pz32 pinv_pz33 pinv_pz34; pinv_pz41 pinv_pz42 pinv_pz43 pinv_pz44];
+% pinv_pz11 = diag((-2./bg.cbar).*(bg.dcbar_dz));
+% pinv_pz12 = diag((-2./bg.cbar).*(bg.dcbar_dz));
+% pinv_pz13 = diag((-2./bg.cbar).*(bg.dcbar_dz));
+% pinv_pz14 = 0*diag(ones(N,1));
+% 
+% pinv_pz21 = 0*diag(ones(N,1));
+% pinv_pz22 = (-1/2).*diag((bg.dzbar_dz)./bg.zbar);
+% pinv_pz23 = (1/2).*diag((bg.dzbar_dz)./bg.zbar);
+% pinv_pz24 =  0*diag(ones(N,1));
+% 
+% pinv_pz31 = 0*diag(ones(N,1));
+% pinv_pz32 = (1/2).*diag((bg.dzbar_dz)./bg.zbar);
+% pinv_pz33 = (-1/2).*diag((bg.dzbar_dz)./bg.zbar);
+% pinv_pz34 = 0*diag(ones(N,1));
+% 
+% pinv_pz41 = 0*diag(ones(N,1));
+% pinv_pz42 = 0*diag(ones(N,1));
+% pinv_pz43 = 0*diag(ones(N,1));
+% pinv_pz44 = (-1/2).*diag((sqrt(2.*bg.Kbar)./bg.Kbar.^2).*(bg.dkbar_dz));
+% 
+% Pinv_Pz = [pinv_pz11 pinv_pz12 pinv_pz13 pinv_pz14; pinv_pz21 pinv_pz22 pinv_pz23 pinv_pz24; pinv_pz31 pinv_pz32 pinv_pz33 pinv_pz34; pinv_pz41 pinv_pz42 pinv_pz43 pinv_pz44];
 
